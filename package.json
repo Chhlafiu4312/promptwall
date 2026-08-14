@@ -98,7 +98,7 @@
     "@deepseek-ai/dsh-typert-protocol": "0.1.0-rc.6",
     "@deepseek-ai/dsh-user-approval": "0.1.0-rc.6",
     "@deepseek-ai/schemastery": "3.18.1-rc.4",
-    "@types/node": "^22.20.0",
+    "@types/node": "^26.2.0",
     "tsdown": "^0.22.2",
     "typescript": "^7.0.2",
     "unrun": "^0.3.1",
