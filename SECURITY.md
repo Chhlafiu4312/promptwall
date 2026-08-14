@@ -6,4 +6,4 @@ For a vulnerability report, contact the repository owner privately and include t
 
 Supported security fixes currently target the latest `0.1.x` release line. Pattern-matching false positives and false negatives are security-relevant product limitations, but a report should distinguish them from secret disclosure, policy bypass, lifecycle escape, or unsafe logging defects.
 
-Starting with `0.1.3`, release tarballs include a SHA-256 checksum and GitHub build-provenance attestation. Verify the current archive with `sha256sum -c` and `gh attestation verify dsh-promptwall-0.1.4.tgz --repo Chhlafiu4312/promptwall` before installing it in a sensitive environment.
+Starting with `0.1.3`, release tarballs include a SHA-256 checksum and GitHub build-provenance attestation. Verify the current archive with `sha256sum -c` and `gh attestation verify dsh-promptwall-0.1.5.tgz --repo Chhlafiu4312/promptwall` before installing it in a sensitive environment.
