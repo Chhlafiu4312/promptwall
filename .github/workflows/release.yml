@@ -42,6 +42,7 @@ jobs:
           pnpm pack --pack-destination dist
           package_file="$(find dist -maxdepth 1 -type f -name '*.tgz' -print -quit)"
           test -n "${package_file}"
+          package_file="$(realpath "${package_file}")"
           package_name="$(node -p "require('./package.json').name")"
           echo "file=${package_file}" >> "${GITHUB_OUTPUT}"
           echo "name=${package_name}" >> "${GITHUB_OUTPUT}"

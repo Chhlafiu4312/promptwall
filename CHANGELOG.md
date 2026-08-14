@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3 - 2026-08-15
+
+- Resolved packed release archives to absolute paths before the Harness clean-profile smoke install.
+- Recorded the failed-closed v0.1.2 release attempt; no v0.1.2 archive was published.
+
 ## 0.1.2 - 2026-08-15
 
 - Pinned every GitHub Action to an immutable commit and added dependency review and CodeQL analysis.
