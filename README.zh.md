@@ -54,7 +54,7 @@ command-producing-text | node lib/cli.js --fail-on suspicious
 源码已经发布到 GitHub，npm 包尚未发布。
 
 ```sh
-dsh plugin --profile headless add github:Chhlafiu4312/promptwall#v0.1.0
+dsh plugin --profile headless add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.0/dsh-promptwall-0.1.0.tgz
 dsh --profile headless --dump-config
 
 # 或构建并安装本地 tarball。
