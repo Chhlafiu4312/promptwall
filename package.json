@@ -100,7 +100,7 @@
     "@deepseek-ai/schemastery": "3.18.1-rc.4",
     "@types/node": "^22.20.0",
     "tsdown": "^0.22.2",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "unrun": "^0.3.1",
     "vitest": "^4.1.8"
   },
