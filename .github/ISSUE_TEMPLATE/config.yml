@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/Chhlafiu4312/promptwall/security/advisories/new
+    about: Report exploitable bypasses, secret disclosure, or unsafe logging privately.

@@ -54,7 +54,7 @@ Exit codes are `0` for success, `1` when `--fail-on` is met, and `2` for invalid
 The source is published on GitHub. The npm package remains unpublished. Run these commands in a local terminal, not in the Harness chat input. A global `dsh` command is not required.
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.1/dsh-promptwall-0.1.1.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.2/dsh-promptwall-0.1.2.tgz
 npx -y @deepseek-ai/dsh --profile web --dump-config
 
 # Restart a running Web UI after installation.
@@ -62,7 +62,7 @@ npx -y @deepseek-ai/dsh web
 
 # Or build and install a local tarball.
 pnpm pack
-npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.1.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.2.tgz
 ```
 
 The commands above install into the Web UI's `web` profile. For terminal-only use, replace `web` with `headless`. The package contributes [cordis.patch.yml](cordis.patch.yml), which registers `promptwall`. An optional `dsh-promptwall/invariant` companion remains available for custom profiles that mount the Harness `invariants` service; the stock `headless` and `web` profiles do not mount it.
@@ -131,6 +131,6 @@ The test suite covers multilingual detection, normalization, overlapping quarant
 
 ## Status
 
-Version `0.1.1` is an independently tested security and stability update published at [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall). The package remains `private: true`; no npm registry publication is performed by the build.
+Version `0.1.2` adds automated supply-chain verification and is published at [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall). Release tarballs include a SHA-256 checksum and GitHub build-provenance attestation. The package remains `private: true`; no npm registry publication is performed by the build.
 
 BSD-3-Clause licensed. See [LICENSE](LICENSE).

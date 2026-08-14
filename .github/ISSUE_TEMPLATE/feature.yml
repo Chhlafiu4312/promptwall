@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose a focused PromptWall improvement or new detection capability.
+title: '[Feature] '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or threat scenario
+      description: Describe the user-facing problem using synthetic examples.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: False-positive, compatibility, or security tradeoffs
+    validations:
+      required: true

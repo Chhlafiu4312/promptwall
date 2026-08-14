@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a reproducible PromptWall defect without including real secrets.
+title: '[Bug] '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not paste real credentials, private documents, or weaponized payloads. Use synthetic examples.
+  - type: input
+    id: version
+    attributes:
+      label: PromptWall version
+      placeholder: 0.1.2
+    validations:
+      required: true
+  - type: input
+    id: harness
+    attributes:
+      label: DeepSeek Harness version and profile
+      placeholder: '@deepseek-ai/dsh version, web or headless'
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal synthetic reproduction
+      description: Include exact commands and synthetic input needed to reproduce the behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and safe logs
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I replaced all secrets and private data with unmistakably synthetic values.
+          required: true

@@ -1,7 +1,7 @@
 {
   "name": "dsh-promptwall",
   "description": "Local prompt-injection and secret-exfiltration firewall for DeepSeek Harness",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "repository": {
     "type": "git",
@@ -22,6 +22,7 @@
     "snapshots:update": "node scripts/update-snapshots.mjs",
     "typecheck": "tsc -b --pretty false && tsc -p tsconfig.vitest.json --pretty false",
     "verify:self-contained": "node scripts/verify-self-contained.mjs",
+    "verify:release-tag": "node scripts/verify-release-tag.mjs",
     "prepare": "node scripts/prepare.mjs",
     "extract:patch": "node scripts/extract-patch.mjs",
     "patch:host": "bash scripts/patch.sh"
