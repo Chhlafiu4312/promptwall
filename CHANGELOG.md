@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 - 2026-08-15
+
+- Pinned every GitHub Action to an immutable commit and added dependency review and CodeQL analysis.
+- Added weekly Dependabot updates, ownership and contribution templates, and a code of conduct.
+- Added a tag-to-version gate, clean-profile installation smoke test, SHA-256 checksum, and build provenance attestation to automated releases.
+
 ## 0.1.1 - 2026-08-14
 
 - Replaced recursive canonical JSON inspection with an iterative traversal.

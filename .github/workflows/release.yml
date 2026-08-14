@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run verify:release-tag -- "${GITHUB_REF_NAME}"
+      - run: pnpm run verify:self-contained
+      - run: pnpm run typecheck
+      - run: pnpm test
+      - name: Build release package
+        id: package
+        shell: bash
+        run: |
+          mkdir -p dist
+          pnpm pack --pack-destination dist
+          package_file="$(find dist -maxdepth 1 -type f -name '*.tgz' -print -quit)"
+          test -n "${package_file}"
+          package_name="$(node -p "require('./package.json').name")"
+          echo "file=${package_file}" >> "${GITHUB_OUTPUT}"
+          echo "name=${package_name}" >> "${GITHUB_OUTPUT}"
+          (
+            cd dist
+            sha256sum "$(basename "${package_file}")" > "$(basename "${package_file}").sha256"
+          )
+      - name: Smoke-install package into a fresh Harness profile
+        shell: bash
+        run: |
+          DSH_HOME="${RUNNER_TEMP}/dsh-release-smoke" npx -y @deepseek-ai/dsh plugin --profile web add "${{ steps.package.outputs.file }}"
+          DSH_HOME="${RUNNER_TEMP}/dsh-release-smoke" npx -y @deepseek-ai/dsh --profile web --dump-config | grep -F "# == ${{ steps.package.outputs.name }}"
+      - name: Attest package provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ steps.package.outputs.file }}
+      - name: Publish immutable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE_FILE: ${{ steps.package.outputs.file }}
+          PACKAGE_NAME: ${{ steps.package.outputs.name }}
+        shell: bash
+        run: |
+          checksum_file="${PACKAGE_FILE}.sha256"
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "${PACKAGE_FILE}" "${checksum_file}" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" "${PACKAGE_FILE}" "${checksum_file}" --verify-tag --title "${PACKAGE_NAME} ${GITHUB_REF_NAME}" --generate-notes
+          fi
