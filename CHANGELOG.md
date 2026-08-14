@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 - 2026-08-14
+
+- Replaced recursive canonical JSON inspection with an iterative traversal.
+- Added configurable JSON depth and node limits that fail closed on oversized structures.
+- Added safe handling and regression coverage for cyclic non-JSON tool results.
+
 ## 0.1.0
 
 - Added multilingual local prompt-injection scanning and quarantine.

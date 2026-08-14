@@ -33,6 +33,18 @@ interface JsonInspection {
   readonly value: JsonValue
   readonly reports: readonly StringInspection[]
   readonly changed: boolean
+  readonly truncated: boolean
+}
+
+const STRUCTURAL_LIMIT_MARKER = '[PROMPTWALL_STRUCTURAL_LIMIT]'
+
+interface JsonContainerFrame {
+  readonly source: JsonValue[] | { [key: string]: JsonValue }
+  readonly target: JsonValue[] | { [key: string]: JsonValue }
+  readonly keys?: readonly string[]
+  readonly length: number
+  readonly depth: number
+  index: number
 }
 
 /** Reusable policy engine with rules compiled at plugin load. */
@@ -91,20 +103,73 @@ export function createPromptWallEngine(config: ResolvedConfig): PromptWallEngine
 
   const inspectJson = (value: JsonValue): JsonInspection => {
     const reports: StringInspection[] = []
-    const visit = (entry: JsonValue): JsonValue => {
+    const frames: JsonContainerFrame[] = []
+    const seen = new WeakSet<object>()
+    let nodeCount = 0
+    let structurallyTruncated = false
+
+    const clone = (entry: JsonValue, depth: number): JsonValue => {
+      nodeCount += 1
+      if (nodeCount > config.maxJsonNodes || depth > config.maxJsonDepth) {
+        structurallyTruncated = true
+        return STRUCTURAL_LIMIT_MARKER
+      }
       if (typeof entry === 'string') {
         const report = inspectText(entry)
         reports.push(report)
         return report.value
       }
       if (entry === null || typeof entry !== 'object') return entry
-      if (Array.isArray(entry)) return entry.map(visit)
-      const output: Record<string, JsonValue> = {}
-      for (const [key, item] of Object.entries(entry)) output[key] = visit(item)
-      return output
+      if (seen.has(entry)) {
+        structurallyTruncated = true
+        return STRUCTURAL_LIMIT_MARKER
+      }
+      seen.add(entry)
+      const target: JsonValue[] | { [key: string]: JsonValue } = Array.isArray(entry)
+        ? []
+        : Object.create(null) as { [key: string]: JsonValue }
+      const keys = Array.isArray(entry) ? undefined : Object.keys(entry)
+      frames.push({
+        source: entry,
+        target,
+        ...(keys === undefined ? {} : { keys }),
+        length: Array.isArray(entry) ? entry.length : keys!.length,
+        depth,
+        index: 0,
+      })
+      return target
     }
-    const inspected = visit(value)
-    return { value: inspected, reports, changed: reports.some(report => report.changed) }
+
+    let inspected: JsonValue
+    try {
+      inspected = clone(value, 0)
+      while (frames.length > 0 && !structurallyTruncated) {
+        const frame = frames[frames.length - 1]!
+        if (frame.index >= frame.length) {
+          frames.pop()
+          continue
+        }
+        const index = frame.index++
+        if (Array.isArray(frame.source)) {
+          const target = frame.target as JsonValue[]
+          target[index] = clone(frame.source[index] as JsonValue, frame.depth + 1)
+        } else {
+          const key = frame.keys![index]!
+          const target = frame.target as { [key: string]: JsonValue }
+          target[key] = clone(frame.source[key]!, frame.depth + 1)
+        }
+      }
+    } catch {
+      structurallyTruncated = true
+      inspected = STRUCTURAL_LIMIT_MARKER
+    }
+    if (structurallyTruncated) inspected = STRUCTURAL_LIMIT_MARKER
+    return {
+      value: inspected,
+      reports,
+      changed: structurallyTruncated || reports.some(report => report.changed),
+      truncated: structurallyTruncated,
+    }
   }
 
   const inspectContent = (content: readonly ContentBlock[]) => {
@@ -129,13 +194,18 @@ export function createPromptWallEngine(config: ResolvedConfig): PromptWallEngine
   }
 }
 
-function aggregateInspection(reports: readonly StringInspection[], changed: boolean, action: ResolvedConfig['injectionAction']): OutputInspection {
+function aggregateInspection(
+  reports: readonly StringInspection[],
+  changed: boolean,
+  action: ResolvedConfig['injectionAction'],
+  structurallyTruncated = false,
+): OutputInspection {
   const score = reports.reduce((highest, report) => Math.max(highest, report.injection.score), 0)
-  const truncated = reports.some(report => report.injection.truncated)
+  const truncated = structurallyTruncated || reports.some(report => report.injection.truncated)
   const dangerous = reports.some(report => report.injection.verdict === 'dangerous')
   const suspicious = reports.some(report => report.injection.verdict === 'suspicious')
   const verdict: Verdict = dangerous ? 'dangerous' : suspicious ? 'suspicious' : 'clean'
-  const blocked = verdict !== 'clean' && (action === 'block' || dangerous || truncated)
+  const blocked = truncated || (verdict !== 'clean' && (action === 'block' || dangerous))
   return {
     verdict,
     score,
@@ -182,7 +252,7 @@ export function inspectPostDecision(
   const canonicalValue = replacementValue ?? (result.isError ? undefined : result.value)
   if (canonicalValue !== undefined) {
     const checked = engine.inspectJson(toJsonValue(canonicalValue))
-    const inspection = aggregateInspection(checked.reports, checked.changed, config.injectionAction)
+    const inspection = aggregateInspection(checked.reports, checked.changed, config.injectionAction, checked.truncated)
     if (inspection.blocked) {
       return {
         decision: {

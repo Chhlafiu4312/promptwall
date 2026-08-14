@@ -50,6 +50,10 @@ export interface Config {
   dangerousThreshold?: number
   /** Maximum UTF-16 code units inspected per text value. */
   maxScanChars?: number
+  /** Maximum nesting depth accepted in one canonical JSON tool result. */
+  maxJsonDepth?: number
+  /** Maximum number of JSON values inspected in one canonical tool result. */
+  maxJsonNodes?: number
   /** Whether every tool output is inspected unless trusted explicitly. */
   inspectToolOutputs?: boolean
   /** Exact tool names whose outputs bypass automatic inspection. */
@@ -71,6 +75,8 @@ export interface ResolvedConfig {
   suspiciousThreshold: number
   dangerousThreshold: number
   maxScanChars: number
+  maxJsonDepth: number
+  maxJsonNodes: number
   inspectToolOutputs: boolean
   trustedTools: readonly string[]
   egressAction: EgressAction
@@ -98,6 +104,8 @@ export const Config: z<Config> = z.object({
   suspiciousThreshold: z.number().min(1).max(99).default(30),
   dangerousThreshold: z.number().min(2).max(100).default(70),
   maxScanChars: z.number().min(1024).max(2_000_000).default(250_000),
+  maxJsonDepth: z.number().min(8).max(2_048).default(256),
+  maxJsonNodes: z.number().min(100).max(1_000_000).default(100_000),
   inspectToolOutputs: z.boolean().default(true),
   trustedTools: z.array(z.string()).default(['promptwall_scan']),
   egressAction: z.union(['off', 'ask', 'deny']).default('ask'),
@@ -130,9 +138,13 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
   const suspiciousThreshold = config.suspiciousThreshold ?? 30
   const dangerousThreshold = config.dangerousThreshold ?? 70
   const maxScanChars = config.maxScanChars ?? 250_000
+  const maxJsonDepth = config.maxJsonDepth ?? 256
+  const maxJsonNodes = config.maxJsonNodes ?? 100_000
   assertIntegerInRange(suspiciousThreshold, 'suspiciousThreshold', 1, 99)
   assertIntegerInRange(dangerousThreshold, 'dangerousThreshold', 2, 100)
   assertIntegerInRange(maxScanChars, 'maxScanChars', 1024, 2_000_000)
+  assertIntegerInRange(maxJsonDepth, 'maxJsonDepth', 8, 2_048)
+  assertIntegerInRange(maxJsonNodes, 'maxJsonNodes', 100, 1_000_000)
   if (suspiciousThreshold >= dangerousThreshold) {
     throw new TypeError('suspiciousThreshold must be lower than dangerousThreshold')
   }
@@ -142,6 +154,8 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     suspiciousThreshold,
     dangerousThreshold,
     maxScanChars,
+    maxJsonDepth,
+    maxJsonNodes,
     inspectToolOutputs: config.inspectToolOutputs ?? true,
     trustedTools: config.trustedTools ?? ['promptwall_scan'],
     egressAction: config.egressAction ?? 'ask',

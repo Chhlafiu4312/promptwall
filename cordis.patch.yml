@@ -9,6 +9,8 @@
         suspiciousThreshold: 30
         dangerousThreshold: 70
         maxScanChars: 250000
+        maxJsonDepth: 256
+        maxJsonNodes: 100000
         inspectToolOutputs: true
         trustedTools:
           - promptwall_scan
