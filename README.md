@@ -26,7 +26,7 @@ egress tool arguments ──> secret scan ──> allow / ask / deny ───�
 - High-confidence redaction for private keys, AWS/GitHub/Slack/Stripe tokens, JWTs, bearer tokens, and credential assignments.
 - `tools/pre-execute` approval or denial when a secret-like value is passed to a network-capable tool.
 - A model-callable `promptwall_scan` tool, standalone CLI, and reusable TypeScript scanner API.
-- Fail-closed handling when content exceeds the configured scan limit.
+- Fail-closed handling when prompt or credential inspection exceeds the configured scan or finding limit.
 
 PromptWall reduces risk; it is not a proof that text is safe or malicious. See the [threat model](docs/design.md).
 
@@ -54,7 +54,7 @@ Exit codes are `0` for success, `1` when `--fail-on` is met, and `2` for invalid
 The source is published on GitHub. The npm package remains unpublished. Run these commands in a local terminal, not in the Harness chat input. A global `dsh` command is not required.
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.3/dsh-promptwall-0.1.3.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.4/dsh-promptwall-0.1.4.tgz
 npx -y @deepseek-ai/dsh --profile web --dump-config
 
 # Restart a running Web UI after installation.
@@ -62,7 +62,7 @@ npx -y @deepseek-ai/dsh web
 
 # Or build and install a local tarball.
 pnpm pack
-npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.3.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.4.tgz
 ```
 
 The commands above install into the Web UI's `web` profile. For terminal-only use, replace `web` with `headless`. The package contributes [cordis.patch.yml](cordis.patch.yml), which registers `promptwall`. An optional `dsh-promptwall/invariant` companion remains available for custom profiles that mount the Harness `invariants` service; the stock `headless` and `web` profiles do not mount it.
@@ -81,7 +81,7 @@ promptwall_scan({ text, includeSanitized? })
 | `injectionAction` | `sanitize` | `monitor`, `sanitize`, or `block` suspicious output. Dangerous and truncated output still fails closed. |
 | `suspiciousThreshold` | `30` | Score that produces a suspicious verdict. |
 | `dangerousThreshold` | `70` | Score that produces a dangerous verdict. |
-| `maxScanChars` | `250000` | Maximum UTF-16 code units inspected per string. |
+| `maxScanChars` | `250000` | Maximum UTF-16 code units inspected per prompt or credential-bearing string; incomplete inspection fails closed. |
 | `maxJsonDepth` | `256` | Maximum canonical tool-result nesting depth; exceeding it fails closed. |
 | `maxJsonNodes` | `100000` | Maximum canonical JSON values inspected per tool result; exceeding it fails closed. |
 | `inspectToolOutputs` | `true` | Inspect post-execution output automatically. |
@@ -111,6 +111,8 @@ Public subpath exports are also available at `dsh-promptwall/scanner` and `dsh-p
 - Detection is local and pattern-based; false positives and false negatives remain possible.
 - PromptWall never executes, uploads, or persists scanned content.
 - Logs contain counts and rule labels, never matched credential values.
+- Credential scans cap both input size and findings; partial redaction is never returned as safe output.
+- Oversized arguments to egress-capable tools require approval or are denied according to `egressAction`.
 - Automatic egress checks depend on tool-name matching; deployments should extend `egressToolPatterns` for custom network tools.
 - Encoded, fragmented, novel, or context-dependent attacks may evade deterministic rules.
 - A trusted tool exemption is a security boundary and should stay narrow.
@@ -131,6 +133,6 @@ The test suite covers multilingual detection, normalization, overlapping quarant
 
 ## Status
 
-Version `0.1.3` adds automated supply-chain verification and is published at [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall). Release tarballs include a SHA-256 checksum and GitHub build-provenance attestation. The package remains `private: true`; no npm registry publication is performed by the build.
+Version `0.1.4` adds bounded, fail-closed credential scanning for tool output and egress arguments and is published at [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall). Release tarballs include a SHA-256 checksum and GitHub build-provenance attestation. The package remains `private: true`; no npm registry publication is performed by the build.
 
 BSD-3-Clause licensed. See [LICENSE](LICENSE).

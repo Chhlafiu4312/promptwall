@@ -78,6 +78,38 @@ describe('PromptWall tool policy', () => {
     expect(checked.decision).toEqual({ kind: 'allow' })
   })
 
+  it('fails closed when egress arguments exceed the secret scan limit', () => {
+    const config = resolveConfig({ maxScanChars: 1_024, egressAction: 'deny' })
+    const engine = createPromptWallEngine(config)
+    const checked = inspectPreDecision(
+      engine,
+      config,
+      execution('web_fetch', { payload: 'x'.repeat(10_000) }),
+      { kind: 'allow' },
+    )
+
+    expect(checked.secrets.truncated).toBe(true)
+    expect(checked.decision.kind).toBe('deny')
+    expect(JSON.stringify(checked.decision)).not.toContain('x'.repeat(100))
+  })
+
+  it('fails closed on cyclic egress arguments', () => {
+    const config = resolveConfig({ egressAction: 'deny' })
+    const engine = createPromptWallEngine(config)
+    const argumentsValue: Record<string, unknown> = {}
+    argumentsValue.self = argumentsValue
+
+    const checked = inspectPreDecision(
+      engine,
+      config,
+      execution('web_fetch', argumentsValue),
+      { kind: 'allow' },
+    )
+
+    expect(checked.secrets.truncated).toBe(true)
+    expect(checked.decision.kind).toBe('deny')
+  })
+
   it('fails closed without recursive stack growth on deeply nested JSON', () => {
     const config = resolveConfig({ maxJsonDepth: 32 })
     const engine = createPromptWallEngine(config)

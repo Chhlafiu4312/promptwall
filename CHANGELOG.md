@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 - 2026-08-15
+
+- Bounded credential scanning with the same per-string resource ceiling used by prompt-injection inspection.
+- Failed closed when egress arguments exceed the credential scan limit or cannot be serialized instead of treating an incomplete scan as clean.
+- Capped adversarial match counts and replaced partially redacted output with a safe scan-limit marker.
+- Added regression coverage for oversized egress arguments, bounded scans, and high-match-count inputs.
+
 ## 0.1.3 - 2026-08-15
 
 - Resolved packed release archives to absolute paths before the Harness clean-profile smoke install.

@@ -14,6 +14,17 @@ export interface SecretReport {
   readonly count: number
   readonly labels: readonly string[]
   readonly findings: readonly SecretFinding[]
+  /** Number of UTF-16 code units inspected. */
+  readonly scannedChars: number
+  /** Original input size in UTF-16 code units. */
+  readonly totalChars: number
+  /** Whether an input or finding limit prevented a complete scan. */
+  readonly truncated: boolean
+}
+
+/** Resource limits for one credential scan. */
+export interface SecretScanOptions {
+  readonly maxScanChars?: number
 }
 
 /** Compiled secret pattern used by a reusable scanner. */
@@ -37,6 +48,10 @@ const BUILTIN_SECRET_PATTERNS: readonly SecretPatternConfig[] = [
     flags: 'iu',
   },
 ]
+
+const DEFAULT_MAX_SCAN_CHARS = 250_000
+const MAX_FINDINGS_PER_PATTERN_AND_WINDOW = 100
+const SECRET_SCAN_LIMIT_MARKER = '<redacted:scan-limit>'
 
 function flags(input: string | undefined): string {
   const requested = input ?? 'u'
@@ -62,16 +77,41 @@ export function compileSecretPatterns(custom: readonly SecretPatternConfig[] = [
   return patterns
 }
 
-/** Scan one value against an already compiled secret-pattern set. */
-function scanWithPatterns(input: string, patterns: readonly CompiledSecretPattern[]): SecretReport {
+function scanWindow(
+  input: string,
+  offset: number,
+  length: number,
+  patterns: readonly CompiledSecretPattern[],
+): { readonly findings: SecretFinding[]; readonly limited: boolean } {
+  const window = input.slice(offset, offset + length)
   const findings: SecretFinding[] = []
+  let limited = false
   for (const pattern of patterns) {
     pattern.expression.lastIndex = 0
-    for (const match of input.matchAll(pattern.expression)) {
+    let perPattern = 0
+    for (const match of window.matchAll(pattern.expression)) {
       if (match.index === undefined || match[0].length === 0) continue
-      findings.push({ id: pattern.id, start: match.index, end: match.index + match[0].length })
+      perPattern += 1
+      if (perPattern > MAX_FINDINGS_PER_PATTERN_AND_WINDOW) {
+        limited = true
+        break
+      }
+      findings.push({ id: pattern.id, start: offset + match.index, end: offset + match.index + match[0].length })
     }
   }
+  return { findings, limited }
+}
+
+/** Scan one value against an already compiled secret-pattern set. */
+function scanWithPatterns(input: string, patterns: readonly CompiledSecretPattern[], maxScanChars: number): SecretReport {
+  const inputTruncated = input.length > maxScanChars
+  const windows = inputTruncated
+    ? [
+        scanWindow(input, 0, Math.floor(maxScanChars / 2), patterns),
+        scanWindow(input, input.length - Math.ceil(maxScanChars / 2), Math.ceil(maxScanChars / 2), patterns),
+      ]
+    : [scanWindow(input, 0, input.length, patterns)]
+  const findings = windows.flatMap(window => window.findings)
   const unique = new Map<string, SecretFinding>()
   for (const finding of findings) unique.set(`${finding.id}:${finding.start}:${finding.end}`, finding)
   const ordered = [...unique.values()].sort((left, right) => left.start - right.start || right.end - left.end)
@@ -79,22 +119,37 @@ function scanWithPatterns(input: string, patterns: readonly CompiledSecretPatter
     count: ordered.length,
     labels: [...new Set(ordered.map(finding => finding.id))].sort(),
     findings: ordered,
+    scannedChars: Math.min(input.length, maxScanChars),
+    totalChars: input.length,
+    truncated: inputTruncated || windows.some(window => window.limited),
   }
 }
 
 /** Build a secret scanner that compiles its patterns exactly once. */
-export function createSecretScanner(custom: readonly SecretPatternConfig[] = []): (input: string) => SecretReport {
+export function createSecretScanner(
+  custom: readonly SecretPatternConfig[] = [],
+  options: SecretScanOptions = {},
+): (input: string) => SecretReport {
   const patterns = compileSecretPatterns(custom)
-  return input => scanWithPatterns(input, patterns)
+  const maxScanChars = options.maxScanChars ?? DEFAULT_MAX_SCAN_CHARS
+  if (!Number.isInteger(maxScanChars) || maxScanChars < 1) {
+    throw new TypeError('maxScanChars must be a positive integer')
+  }
+  return input => scanWithPatterns(input, patterns, maxScanChars)
 }
 
 /** Find likely credentials without retaining their values. */
-export function scanSecrets(input: string, custom: readonly SecretPatternConfig[] = []): SecretReport {
-  return createSecretScanner(custom)(input)
+export function scanSecrets(
+  input: string,
+  custom: readonly SecretPatternConfig[] = [],
+  options: SecretScanOptions = {},
+): SecretReport {
+  return createSecretScanner(custom, options)(input)
 }
 
 /** Redact secret ranges with labels while preserving non-secret text. */
 export function redactSecrets(input: string, report: SecretReport): string {
+  if (report.truncated) return SECRET_SCAN_LIMIT_MARKER
   if (report.findings.length === 0) return input
   const ranges: Array<{ start: number; end: number; labels: Set<string> }> = []
   for (const finding of report.findings) {

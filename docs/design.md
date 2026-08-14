@@ -16,7 +16,7 @@ PromptWall prevents instructions embedded in untrusted tool output from silently
 
 ## Security defaults
 
-Detection runs locally. PromptWall does not call a model or a remote service. It never logs matched secret values. High-confidence prompt injection is quarantined, lower-confidence findings are annotated, and suspected egress of credentials requires approval rather than being silently allowed.
+Detection runs locally. PromptWall does not call a model or a remote service. It never logs matched secret values. High-confidence prompt injection is quarantined, lower-confidence findings are annotated, and suspected egress of credentials requires approval rather than being silently allowed. Prompt and credential scans share a bounded input ceiling; incomplete credential inspection fails closed and never produces a partially redacted value that callers could mistake for safe output.
 
 ## Invariant decision
 
@@ -24,4 +24,4 @@ The stock bundle does not install a runtime invariant. PromptWall owns no durabl
 
 ## Evidence
 
-Unit tests cover multilingual detection, normalization, overlapping findings, sanitization, secret detection, and policy decisions. Cordis tests cover registration and disposal. Stable CLI output has snapshots. A package check covers self-containment, types, tests, build, and archive contents.
+Unit tests cover multilingual detection, normalization, overlapping findings, sanitization, bounded secret detection, oversized egress arguments, and policy decisions. Cordis tests cover registration and disposal. Stable CLI output has snapshots. A package check covers self-containment, types, tests, build, and archive contents.
