@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5 - 2026-08-15
+
+- Inspected every string-bearing field in merge-extensible model-visible content blocks, including reasoning and nested tool-result blocks.
+- Inspected tool-provided and downstream `additionalContexts` before they can enter the next model request.
+- Failed closed when an unsafe tool-provided context requires rewriting that the post-execution contract cannot safely perform.
+- Added regression coverage for non-text content blocks and clean, suspicious, and dangerous additional contexts.
+
 ## 0.1.4 - 2026-08-15
 
 - Bounded credential scanning with the same per-string resource ceiling used by prompt-injection inspection.

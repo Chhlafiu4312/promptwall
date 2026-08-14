@@ -1,6 +1,6 @@
 /** PromptWall output transformation and egress-policy helpers. */
 
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock, UserMessage } from '@deepseek-ai/dsh-llm'
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import type { ResolvedConfig } from './config.ts'
 import { createScanner, quarantineText, type ScanReport, type Verdict } from './scanner.ts'
@@ -53,8 +53,8 @@ export interface PromptWallEngine {
   inspectText(input: string): StringInspection
   /** Inspect every string in a JSON value. */
   inspectJson(value: JsonValue): JsonInspection
-  /** Inspect DSH content blocks without changing non-text blocks. */
-  inspectContent(content: readonly ContentBlock[]): { content: ContentBlock[]; reports: readonly StringInspection[]; changed: boolean }
+  /** Inspect every string-bearing field in merge-extensible DSH content blocks. */
+  inspectContent(content: readonly ContentBlock[]): { content: ContentBlock[]; reports: readonly StringInspection[]; changed: boolean; truncated: boolean }
   /** Decide whether a tool name is treated as an egress capability. */
   isEgressTool(name: string): boolean
   /** Find likely secrets in tool arguments without retaining their values. */
@@ -173,16 +173,15 @@ export function createPromptWallEngine(config: ResolvedConfig): PromptWallEngine
   }
 
   const inspectContent = (content: readonly ContentBlock[]) => {
-    const reports: StringInspection[] = []
-    let changed = false
-    const output = content.map((block): ContentBlock => {
-      if (block.type !== 'text') return block
-      const report = inspectText(block.text)
-      reports.push(report)
-      if (report.changed) changed = true
-      return report.changed ? { ...block, text: report.value } : block
-    })
-    return { content: output, reports, changed }
+    const checked = inspectJson(toJsonValue(content))
+    return {
+      content: checked.truncated
+        ? [{ type: 'text' as const, text: STRUCTURAL_LIMIT_MARKER }]
+        : checked.value as unknown as ContentBlock[],
+      reports: checked.reports,
+      changed: checked.changed,
+      truncated: checked.truncated,
+    }
   }
 
   return {
@@ -235,6 +234,38 @@ function safeFeedback(inspection: OutputInspection, toolName: string): ContentBl
   }]
 }
 
+interface ContextInspection {
+  readonly contexts: UserMessage[] | undefined
+  readonly reports: readonly StringInspection[]
+  readonly changed: boolean
+  readonly truncated: boolean
+}
+
+function inspectContexts(engine: PromptWallEngine, contexts: readonly UserMessage[] | undefined): ContextInspection {
+  if (contexts === undefined) return { contexts: undefined, reports: [], changed: false, truncated: false }
+  const checked = engine.inspectJson(toJsonValue(contexts))
+  return {
+    contexts: checked.truncated ? undefined : checked.value as unknown as UserMessage[],
+    reports: checked.reports,
+    changed: checked.changed,
+    truncated: checked.truncated,
+  }
+}
+
+function combineInspection(
+  config: ResolvedConfig,
+  parts: readonly { readonly reports: readonly StringInspection[]; readonly changed: boolean; readonly truncated: boolean }[],
+  forceBlocked = false,
+): OutputInspection {
+  const inspection = aggregateInspection(
+    parts.flatMap(part => part.reports),
+    parts.some(part => part.changed),
+    config.injectionAction,
+    parts.some(part => part.truncated),
+  )
+  return forceBlocked && !inspection.blocked ? { ...inspection, blocked: true } : inspection
+}
+
 /** Apply output policy after downstream post-execution listeners have run. */
 export function inspectPostDecision(
   engine: PromptWallEngine,
@@ -245,34 +276,44 @@ export function inspectPostDecision(
 ): { readonly decision: PostToolDecision; readonly inspection: OutputInspection } {
   if (downstream.kind === 'block') {
     const checked = engine.inspectContent(downstream.feedback)
-    const inspection = aggregateInspection(checked.reports, checked.changed, config.injectionAction)
+    const decisionContexts = inspectContexts(engine, downstream.additionalContexts)
+    const inspection = combineInspection(config, [checked, decisionContexts])
     return {
-      decision: checked.changed ? { ...downstream, feedback: checked.content } : downstream,
+      decision: checked.changed || decisionContexts.changed
+        ? {
+            kind: 'block',
+            feedback: checked.content,
+            ...(decisionContexts.contexts === undefined ? {} : { additionalContexts: decisionContexts.contexts }),
+          }
+        : downstream,
       inspection,
     }
   }
 
+  const resultContexts = inspectContexts(engine, result.additionalContexts)
+  const decisionContexts = inspectContexts(engine, downstream.additionalContexts)
   const replacementValue = 'value' in downstream ? downstream.value : undefined
   const canonicalValue = replacementValue ?? (result.isError ? undefined : result.value)
   if (canonicalValue !== undefined) {
     const checked = engine.inspectJson(toJsonValue(canonicalValue))
-    const inspection = aggregateInspection(checked.reports, checked.changed, config.injectionAction, checked.truncated)
+    // Tool-provided contexts cannot be rewritten by a post-execute listener. If
+    // they need any transformation, fail closed instead of retaining originals.
+    const inspection = combineInspection(config, [checked, resultContexts, decisionContexts], resultContexts.changed)
     if (inspection.blocked) {
       return {
         decision: {
           kind: 'block',
           feedback: safeFeedback(inspection, exec.name),
-          ...(downstream.additionalContexts === undefined ? {} : { additionalContexts: downstream.additionalContexts }),
         },
         inspection,
       }
     }
-    if (checked.changed) {
+    if (checked.changed || decisionContexts.changed) {
       return {
         decision: {
           kind: 'accept',
           value: checked.value,
-          ...(downstream.additionalContexts === undefined ? {} : { additionalContexts: downstream.additionalContexts }),
+          ...(decisionContexts.contexts === undefined ? {} : { additionalContexts: decisionContexts.contexts }),
         },
         inspection,
       }
@@ -282,23 +323,22 @@ export function inspectPostDecision(
 
   const content = downstream.content ?? result.content
   const checked = engine.inspectContent(content)
-  const inspection = aggregateInspection(checked.reports, checked.changed, config.injectionAction)
+  const inspection = combineInspection(config, [checked, resultContexts, decisionContexts], resultContexts.changed)
   if (inspection.blocked) {
     return {
       decision: {
         kind: 'block',
         feedback: safeFeedback(inspection, exec.name),
-        ...(downstream.additionalContexts === undefined ? {} : { additionalContexts: downstream.additionalContexts }),
       },
       inspection,
     }
   }
   return {
-    decision: checked.changed
+    decision: checked.changed || decisionContexts.changed
       ? {
           kind: 'accept',
           content: checked.content,
-          ...(downstream.additionalContexts === undefined ? {} : { additionalContexts: downstream.additionalContexts }),
+          ...(decisionContexts.contexts === undefined ? {} : { additionalContexts: decisionContexts.contexts }),
         }
       : downstream,
     inspection,
