@@ -1,0 +1,14 @@
+packages:
+  - .
+
+autoInstallPeers: false
+
+allowBuilds:
+  esbuild: true
+
+minimumReleaseAgeExclude:
+  - '@deepseek-ai/dsh-tools@0.1.0-rc.6'
+  - '@deepseek-ai/dsh-code-runtime@0.1.0-rc.6'
+  - '@deepseek-ai/dsh-invariants@0.1.0-rc.6'
+  - '@deepseek-ai/dsh-scope@0.1.0-rc.6'
+  - '@deepseek-ai/dsh-timeout@0.1.0-rc.6'

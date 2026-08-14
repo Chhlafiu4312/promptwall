@@ -1,0 +1,26 @@
+# PromptWall can be added to either the Web or Headless profile.
+
+- insert:
+    - id: promptwall
+      name: dsh-promptwall
+      config:
+        enabled: true
+        injectionAction: sanitize
+        suspiciousThreshold: 30
+        dangerousThreshold: 70
+        maxScanChars: 250000
+        inspectToolOutputs: true
+        trustedTools:
+          - promptwall_scan
+        egressAction: ask
+        egressToolPatterns:
+          - web
+          - fetch
+          - http
+          - browser
+          - mcp
+          - upload
+          - email
+          - slack
+          - discord
+          - telegram

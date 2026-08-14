@@ -1,0 +1,14 @@
+lib/
+node_modules/
+*.tsbuildinfo
+*.tgz
+coverage/
+.pnpm-store/
+.env
+.env.*
+!.env.example
+.credentials.yaml
+.anonymous-user-id
+sessions/
+*.log
+.DS_Store
