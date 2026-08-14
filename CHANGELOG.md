@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.6 - 2026-08-15
+
+- Inspected both canonical JSON values and their independent rendered content projections for successful tool results.
+- Applied output policy to downstream content replacements before they become model-visible.
+- Preserved safe sanitization by replacing content when only rendering changes and replacing values through the trusted pure renderer when canonical data changes.
+- Correctly treated an explicit downstream `null` as a value replacement instead of falling back to discarded output.
+- Added regression coverage for dangerous and suspicious rendered output, downstream replacements, and null values.
+
 ## 0.1.5 - 2026-08-15
 
 - Inspected every string-bearing field in merge-extensible model-visible content blocks, including reasoning and nested tool-result blocks.
