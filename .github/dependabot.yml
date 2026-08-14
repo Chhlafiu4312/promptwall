@@ -8,6 +8,10 @@ updates:
       time: '08:00'
       timezone: Asia/Singapore
     open-pull-requests-limit: 5
+    # Keep compile-time APIs aligned with the oldest Node runtime in package.json engines.
+    ignore:
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       development-dependencies:
         dependency-type: development
