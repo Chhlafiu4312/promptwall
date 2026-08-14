@@ -292,13 +292,25 @@ export function inspectPostDecision(
 
   const resultContexts = inspectContexts(engine, result.additionalContexts)
   const decisionContexts = inspectContexts(engine, downstream.additionalContexts)
-  const replacementValue = 'value' in downstream ? downstream.value : undefined
-  const canonicalValue = replacementValue ?? (result.isError ? undefined : result.value)
+  const replacesValue = 'value' in downstream
+  const canonicalValue = replacesValue ? downstream.value : (result.isError ? undefined : result.value)
   if (canonicalValue !== undefined) {
     const checked = engine.inspectJson(toJsonValue(canonicalValue))
+    // A downstream value replacement is rerendered only after this hook. The
+    // renderer is trusted code, so inspect its untrusted canonical input here.
+    // Otherwise the current content projection is the exact model-visible one.
+    const checkedContent = replacesValue
+      ? undefined
+      : engine.inspectContent(downstream.content ?? result.content)
     // Tool-provided contexts cannot be rewritten by a post-execute listener. If
     // they need any transformation, fail closed instead of retaining originals.
-    const inspection = combineInspection(config, [checked, resultContexts, decisionContexts], resultContexts.changed)
+    // A value replacement is rerendered by the tool's trusted pure renderer,
+    // so it safely supersedes a simultaneous transformation of current content.
+    const inspection = combineInspection(
+      config,
+      [checked, ...(checkedContent === undefined ? [] : [checkedContent]), resultContexts, decisionContexts],
+      resultContexts.changed,
+    )
     if (inspection.blocked) {
       return {
         decision: {
@@ -308,11 +320,30 @@ export function inspectPostDecision(
         inspection,
       }
     }
-    if (checked.changed || decisionContexts.changed) {
+    if (checked.changed) {
       return {
         decision: {
           kind: 'accept',
           value: checked.value,
+          ...(decisionContexts.contexts === undefined ? {} : { additionalContexts: decisionContexts.contexts }),
+        },
+        inspection,
+      }
+    }
+    if (checkedContent?.changed === true) {
+      return {
+        decision: {
+          kind: 'accept',
+          content: checkedContent.content,
+          ...(decisionContexts.contexts === undefined ? {} : { additionalContexts: decisionContexts.contexts }),
+        },
+        inspection,
+      }
+    }
+    if (decisionContexts.changed) {
+      return {
+        decision: {
+          ...downstream,
           ...(decisionContexts.contexts === undefined ? {} : { additionalContexts: decisionContexts.contexts }),
         },
         inspection,

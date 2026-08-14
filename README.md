@@ -20,7 +20,7 @@ egress tool arguments ──> secret scan ──> allow / ask / deny ───�
 
 ## What you get
 
-- Automatic `tools/post-execute` inspection for every tool except an explicit trust list, covering all merge-extensible content-block fields and additional model contexts.
+- Automatic `tools/post-execute` inspection for every tool except an explicit trust list, covering canonical values, their independently rendered merge-extensible content blocks, downstream replacements, and additional model contexts.
 - English and Chinese rules for instruction override, role hijack, prompt theft, credential exfiltration, tool coercion, persistence, and obfuscation.
 - Quarantine markers that preserve useful surrounding data while removing suspicious instruction spans.
 - High-confidence redaction for private keys, AWS/GitHub/Slack/Stripe tokens, JWTs, bearer tokens, and credential assignments.
@@ -54,7 +54,7 @@ Exit codes are `0` for success, `1` when `--fail-on` is met, and `2` for invalid
 The source is published on GitHub. The npm package remains unpublished. Run these commands in a local terminal, not in the Harness chat input. A global `dsh` command is not required.
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.5/dsh-promptwall-0.1.5.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.6/dsh-promptwall-0.1.6.tgz
 npx -y @deepseek-ai/dsh --profile web --dump-config
 
 # Restart a running Web UI after installation.
@@ -62,7 +62,7 @@ npx -y @deepseek-ai/dsh web
 
 # Or build and install a local tarball.
 pnpm pack
-npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.5.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.6.tgz
 ```
 
 The commands above install into the Web UI's `web` profile. For terminal-only use, replace `web` with `headless`. The package contributes [cordis.patch.yml](cordis.patch.yml), which registers `promptwall`. An optional `dsh-promptwall/invariant` companion remains available for custom profiles that mount the Harness `invariants` service; the stock `headless` and `web` profiles do not mount it.
@@ -113,6 +113,7 @@ Public subpath exports are also available at `dsh-promptwall/scanner` and `dsh-p
 - Logs contain counts and rule labels, never matched credential values.
 - Credential scans cap both input size and findings; partial redaction is never returned as safe output.
 - Every string-bearing field in current or future content-block shapes is inspected within the same JSON depth and node limits; inspection is not limited to `text` blocks.
+- Successful tool values and rendered content are separate policy boundaries; both are inspected unless a downstream value replacement makes the old rendering unreachable.
 - Tool-provided additional contexts fail closed if they require transformation because the Harness post-execution contract cannot replace them safely.
 - Oversized arguments to egress-capable tools require approval or are denied according to `egressAction`.
 - Automatic egress checks depend on tool-name matching; deployments should extend `egressToolPatterns` for custom network tools.
@@ -131,10 +132,10 @@ pnpm run prepare
 pnpm run build
 ```
 
-The test suite covers multilingual detection, normalization, overlapping quarantine ranges, redaction, all model-visible content boundaries, pre/post tool policy, Loader exports, registration disposal, and CLI behavior. Contribution guidance is in [CONTRIBUTING.md](CONTRIBUTING.md).
+The test suite covers multilingual detection, normalization, overlapping quarantine ranges, redaction, canonical and rendered output projections, all model-visible content boundaries, pre/post tool policy, Loader exports, registration disposal, and CLI behavior. Contribution guidance is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-Version `0.1.5` extends fail-closed inspection across every model-visible content block and additional context and is published at [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall). Release tarballs include a SHA-256 checksum and GitHub build-provenance attestation. The package remains `private: true`; no npm registry publication is performed by the build.
+Version `0.1.6` closes the successful-result projection gap by inspecting canonical values and their rendered model content independently and is published at [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall). Release tarballs include a SHA-256 checksum and GitHub build-provenance attestation. The package remains `private: true`; no npm registry publication is performed by the build.
 
 BSD-3-Clause licensed. See [LICENSE](LICENSE).

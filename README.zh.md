@@ -20,7 +20,7 @@ Agent 经常读取网页、Issue、文档和终端输出。这些内容可能夹
 
 ## 核心能力
 
-- 自动检查工具执行后的输出，覆盖可扩展内容块的所有字符串字段和附加模型上下文，并支持精确的可信工具白名单。
+- 自动检查工具执行后的输出，覆盖规范 value、独立渲染的可扩展内容块、下游替换内容和附加模型上下文，并支持精确的可信工具白名单。
 - 覆盖中英文的指令覆盖、角色劫持、系统提示窃取、凭据外泄、工具强迫、持久化和混淆检测。
 - 用隔离标记移除可疑指令片段，同时尽可能保留周围有用信息。
 - 对私钥及 AWS、GitHub、Slack、Stripe、JWT、Bearer 等常见凭据进行高置信度脱敏。
@@ -54,7 +54,7 @@ command-producing-text | node lib/cli.js --fail-on suspicious
 源码已经发布到 GitHub，npm 包尚未发布。请在本机终端中运行以下命令，不要粘贴到 Harness 的聊天输入框中；无需预先全局安装 `dsh`。
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.5/dsh-promptwall-0.1.5.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.6/dsh-promptwall-0.1.6.tgz
 npx -y @deepseek-ai/dsh --profile web --dump-config
 
 # 安装后重启正在运行的 Web UI。
@@ -62,7 +62,7 @@ npx -y @deepseek-ai/dsh web
 
 # 或构建并安装本地 tarball。
 pnpm pack
-npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.5.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.6.tgz
 ```
 
 以上命令会安装到 Web UI 使用的 `web` profile；如果只使用终端模式，请把 `web` 替换为 `headless`。包内的 [cordis.patch.yml](cordis.patch.yml) 会注册 `promptwall`。可选的 `dsh-promptwall/invariant` companion 保留给显式挂载 Harness `invariants` 服务的自定义 profile；官方 `headless` 与 `web` profile 默认不挂载该服务。激活后的工具是 `promptwall_scan({ text, includeSanitized? })`。
@@ -92,6 +92,7 @@ npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.5.tgz
 - 扫描内容不会被执行、上传或持久化。
 - 日志只记录数量和规则标签，不记录凭据原文。
 - 当前及未来内容块类型中的所有字符串字段都会在相同 JSON 深度和节点限制内检查，不只检查 `text` 块。
+- 成功工具结果的规范 value 与渲染 content 是两个独立策略边界；除非下游 value 替换使旧渲染不可达，否则两者都会检查。
 - 工具自身提供的附加上下文如果需要改写会失败关闭，因为 Harness 的执行后契约无法安全替换这部分内容。
 - 外发保护依赖工具名匹配；自定义联网工具需要加入 `egressToolPatterns`。
 - 新型、分片、编码或强上下文依赖的攻击可能绕过确定性规则。
@@ -109,6 +110,6 @@ pnpm run prepare
 pnpm run build
 ```
 
-`0.1.5` 把失败关闭检查扩展到全部模型可见内容块与附加上下文。版本发布于 [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall)。Release tarball 同时提供 SHA-256 校验文件和 GitHub 构建来源证明。包仍保持 `private: true`，构建过程不会发布到 npm。
+`0.1.6` 通过独立检查规范 value 与实际渲染给模型的 content，关闭成功结果的投影缺口。版本发布于 [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall)。Release tarball 同时提供 SHA-256 校验文件和 GitHub 构建来源证明。包仍保持 `private: true`，构建过程不会发布到 npm。
 
 采用 BSD-3-Clause 许可证，详见 [LICENSE](LICENSE)。
