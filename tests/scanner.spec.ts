@@ -78,4 +78,31 @@ describe('secret scanner', () => {
   it('does not flag ordinary short identifiers', () => {
     expect(scanSecrets('user_id=abc123 and color=#112233').count).toBe(0)
   })
+
+  it('bounds secret scanning and refuses partial redaction', () => {
+    const input = `prefix ${'x'.repeat(2_000)} sk-abcdefghijklmnopqrstuvwxyz123456`
+    const report = scanSecrets(input, [], { maxScanChars: 1_024 })
+    expect(report).toMatchObject({
+      scannedChars: 1_024,
+      totalChars: input.length,
+      truncated: true,
+    })
+    expect(redactSecrets(input, report)).toBe('<redacted:scan-limit>')
+  })
+
+  it('caps adversarial match counts and refuses incomplete output', () => {
+    const input = Array.from({ length: 150 }, () => 'sk-abcdefghijklmnopqrstuvwxyz123456').join(' ')
+    const report = scanSecrets(input, [], { maxScanChars: input.length })
+    expect(report.count).toBe(100)
+    expect(report.truncated).toBe(true)
+    expect(redactSecrets(input, report)).toBe('<redacted:scan-limit>')
+  })
+
+  it('does not report truncation at the exact finding cap', () => {
+    const input = Array.from({ length: 100 }, () => 'sk-abcdefghijklmnopqrstuvwxyz123456').join(' ')
+    const report = scanSecrets(input, [], { maxScanChars: input.length })
+    expect(report.count).toBe(100)
+    expect(report.truncated).toBe(false)
+    expect(redactSecrets(input, report)).not.toContain('sk-abcdefghijklmnopqrstuvwxyz123456')
+  })
 })

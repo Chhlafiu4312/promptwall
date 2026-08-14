@@ -65,11 +65,11 @@ function toJsonValue(input: unknown): JsonValue {
   return input as JsonValue
 }
 
-function stringifyArguments(input: unknown): string {
+function stringifyArguments(input: unknown): { readonly text: string; readonly incomplete: boolean } {
   try {
-    return JSON.stringify(input) ?? ''
+    return { text: JSON.stringify(input) ?? '', incomplete: false }
   } catch {
-    return '[unserializable arguments]'
+    return { text: '', incomplete: true }
   }
 }
 
@@ -81,7 +81,7 @@ export function createPromptWallEngine(config: ResolvedConfig): PromptWallEngine
     maxScanChars: config.maxScanChars,
     rules: config.rules,
   })
-  const scanSecret = createSecretScanner(config.secretPatterns)
+  const scanSecret = createSecretScanner(config.secretPatterns, { maxScanChars: config.maxScanChars })
   const egressMatchers = config.egressToolPatterns.map((pattern) => {
     try {
       return new RegExp(pattern, 'iu')
@@ -190,7 +190,11 @@ export function createPromptWallEngine(config: ResolvedConfig): PromptWallEngine
     inspectJson,
     inspectContent,
     isEgressTool: name => egressMatchers.some(expression => expression.test(name)),
-    inspectArguments: value => scanSecret(stringifyArguments(value)),
+    inspectArguments: (value) => {
+      const serialized = stringifyArguments(value)
+      const report = scanSecret(serialized.text)
+      return serialized.incomplete ? { ...report, truncated: true } : report
+    },
   }
 }
 
@@ -201,7 +205,7 @@ function aggregateInspection(
   structurallyTruncated = false,
 ): OutputInspection {
   const score = reports.reduce((highest, report) => Math.max(highest, report.injection.score), 0)
-  const truncated = structurallyTruncated || reports.some(report => report.injection.truncated)
+  const truncated = structurallyTruncated || reports.some(report => report.injection.truncated || report.secrets.truncated)
   const dangerous = reports.some(report => report.injection.verdict === 'dangerous')
   const suspicious = reports.some(report => report.injection.verdict === 'suspicious')
   const verdict: Verdict = dangerous ? 'dangerous' : suspicious ? 'suspicious' : 'clean'
@@ -309,12 +313,14 @@ export function inspectPreDecision(
   downstream: PreToolDecision,
 ): { readonly decision: PreToolDecision; readonly secrets: SecretReport } {
   const secrets = config.egressAction === 'off' || !engine.isEgressTool(exec.name)
-    ? { count: 0, labels: [], findings: [] }
+    ? { count: 0, labels: [], findings: [], scannedChars: 0, totalChars: 0, truncated: false }
     : engine.inspectArguments(exec.arguments)
-  if (downstream.kind === 'deny' || secrets.count === 0 || config.egressAction === 'off') {
+  if (downstream.kind === 'deny' || (secrets.count === 0 && !secrets.truncated) || config.egressAction === 'off') {
     return { decision: downstream, secrets }
   }
-  const reason = `PromptWall detected ${secrets.count} secret-like value(s) in arguments for egress tool ${exec.name}; labels=${secrets.labels.join(',')}`
+  const reason = secrets.truncated
+    ? `PromptWall could not completely inspect arguments for egress tool ${exec.name}; an inspection limit or serialization boundary was exceeded`
+    : `PromptWall detected ${secrets.count} secret-like value(s) in arguments for egress tool ${exec.name}; labels=${secrets.labels.join(',')}`
   if (config.egressAction === 'deny') return { decision: { kind: 'deny', reason }, secrets }
   if (downstream.kind === 'ask') return { decision: downstream, secrets }
   return { decision: { kind: 'ask', reason }, secrets }

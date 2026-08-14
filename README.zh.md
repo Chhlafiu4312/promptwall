@@ -54,7 +54,7 @@ command-producing-text | node lib/cli.js --fail-on suspicious
 源码已经发布到 GitHub，npm 包尚未发布。请在本机终端中运行以下命令，不要粘贴到 Harness 的聊天输入框中；无需预先全局安装 `dsh`。
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.3/dsh-promptwall-0.1.3.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add https://github.com/Chhlafiu4312/promptwall/releases/download/v0.1.4/dsh-promptwall-0.1.4.tgz
 npx -y @deepseek-ai/dsh --profile web --dump-config
 
 # 安装后重启正在运行的 Web UI。
@@ -62,7 +62,7 @@ npx -y @deepseek-ai/dsh web
 
 # 或构建并安装本地 tarball。
 pnpm pack
-npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.3.tgz
+npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.4.tgz
 ```
 
 以上命令会安装到 Web UI 使用的 `web` profile；如果只使用终端模式，请把 `web` 替换为 `headless`。包内的 [cordis.patch.yml](cordis.patch.yml) 会注册 `promptwall`。可选的 `dsh-promptwall/invariant` companion 保留给显式挂载 Harness `invariants` 服务的自定义 profile；官方 `headless` 与 `web` profile 默认不挂载该服务。激活后的工具是 `promptwall_scan({ text, includeSanitized? })`。
@@ -75,7 +75,7 @@ npx -y @deepseek-ai/dsh plugin --profile web add ./dsh-promptwall-0.1.3.tgz
 | `injectionAction` | `sanitize` | 对可疑输出使用 `monitor`、`sanitize` 或 `block`；危险或被截断的输出仍会失败关闭。 |
 | `suspiciousThreshold` | `30` | 判定为可疑的分数。 |
 | `dangerousThreshold` | `70` | 判定为危险的分数。 |
-| `maxScanChars` | `250000` | 每个字符串最多检查的 UTF-16 代码单元。 |
+| `maxScanChars` | `250000` | 每个提示或凭据字符串最多检查的 UTF-16 代码单元；检查不完整时失败关闭。 |
 | `maxJsonDepth` | `256` | 工具结果的最大 JSON 嵌套深度；超限时失败关闭。 |
 | `maxJsonNodes` | `100000` | 每个工具结果最多检查的 JSON 值数量；超限时失败关闭。 |
 | `trustedTools` | `promptwall_scan` | 不进行二次自动检查的精确工具名。 |
@@ -107,6 +107,6 @@ pnpm run prepare
 pnpm run build
 ```
 
-`0.1.3` 增加了自动供应链校验，并发布于 [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall)。Release tarball 同时提供 SHA-256 校验文件和 GitHub 构建来源证明。包仍保持 `private: true`，构建过程不会发布到 npm。
+`0.1.4` 增加了有界、失败关闭的凭据扫描：超大外发参数必须请求批准或按策略拒绝，检查不完整时不会返回部分脱敏内容。版本发布于 [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall)。Release tarball 同时提供 SHA-256 校验文件和 GitHub 构建来源证明。包仍保持 `private: true`，构建过程不会发布到 npm。
 
 采用 BSD-3-Clause 许可证，详见 [LICENSE](LICENSE)。

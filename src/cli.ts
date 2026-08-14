@@ -127,17 +127,18 @@ export async function runCli(argv: readonly string[], io: CliIo = defaultIo): Pr
   }
   const engine = createPromptWallEngine(resolveConfig({ maxScanChars: options.maxChars, injectionAction: 'sanitize' }))
   const checked = engine.inspectText(text)
+  const truncated = checked.injection.truncated || checked.secrets.truncated
   const result: PromptWallToolResult = {
     verdict: checked.injection.verdict,
     score: checked.injection.score,
     totalChars: checked.injection.totalChars,
     scannedChars: checked.injection.scannedChars,
-    truncated: checked.injection.truncated,
+    truncated,
     findingCount: checked.injection.findings.length,
     findings: checked.injection.findings.map(finding => ({ ...finding, excerpt: engine.inspectText(finding.excerpt).value })),
     secretCount: checked.secrets.count,
     secretLabels: checked.secrets.labels,
-    sanitizedText: options.sanitize && !checked.injection.truncated ? checked.value : null,
+    sanitizedText: options.sanitize && !truncated ? checked.value : null,
     limitation: 'Pattern matches indicate risk; they do not prove malicious intent. Truncated content is unsafe to pass through automatically.',
   }
   io.writeOut(`${options.json ? JSON.stringify(result, null, 2) : formatPromptWallReport(result)}\n`)

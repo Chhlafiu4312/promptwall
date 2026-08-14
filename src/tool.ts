@@ -50,17 +50,18 @@ export function formatPromptWallReport(result: PromptWallToolResult): string {
 function scanResult(engine: PromptWallEngine, text: string, includeSanitized: boolean): PromptWallToolResult {
   const checked = engine.inspectText(text)
   const sanitizedExcerpt = (excerpt: string): string => engine.inspectText(excerpt).value
+  const truncated = checked.injection.truncated || checked.secrets.truncated
   return {
     verdict: checked.injection.verdict,
     score: checked.injection.score,
     totalChars: checked.injection.totalChars,
     scannedChars: checked.injection.scannedChars,
-    truncated: checked.injection.truncated,
+    truncated,
     findingCount: checked.injection.findings.length,
     findings: checked.injection.findings.map(finding => ({ ...finding, excerpt: sanitizedExcerpt(finding.excerpt) })),
     secretCount: checked.secrets.count,
     secretLabels: checked.secrets.labels,
-    sanitizedText: includeSanitized && !checked.injection.truncated ? checked.value : null,
+    sanitizedText: includeSanitized && !truncated ? checked.value : null,
     limitation: 'Pattern matches indicate risk; they do not prove malicious intent. Truncated content is unsafe to pass through automatically.',
   }
 }
