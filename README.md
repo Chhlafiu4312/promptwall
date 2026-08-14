@@ -2,6 +2,9 @@
 
 English | [中文](README.zh.md)
 
+[![CI](https://github.com/Chhlafiu4312/promptwall/actions/workflows/ci.yml/badge.svg)](https://github.com/Chhlafiu4312/promptwall/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
+
 PromptWall is a local prompt-injection firewall and secret-egress guard for DeepSeek Harness. It inspects untrusted tool output before the model sees it and asks for approval before likely credentials enter network-capable tools.
 
 It is deliberately deterministic: no model call, no telemetry, no remote classifier, and no raw secret values in logs.
@@ -48,12 +51,15 @@ Exit codes are `0` for success, `1` when `--fail-on` is met, and `2` for invalid
 
 ## DeepSeek Harness installation
 
-This repository is private-package-ready for local tarball and Git consumption; it has not been published to npm.
+The source is published on GitHub. The npm package remains unpublished.
 
 ```sh
+dsh plugin --profile headless add github:Chhlafiu4312/promptwall#v0.1.0
+dsh --profile headless --dump-config
+
+# Or build and install a local tarball.
 pnpm pack
 dsh plugin --profile headless add ./dsh-promptwall-0.1.0.tgz
-dsh --profile headless --dump-config
 ```
 
 The package contributes [cordis.patch.yml](cordis.patch.yml), which registers `promptwall`. The same bundle can be installed into the `web` profile. An optional `dsh-promptwall/invariant` companion remains available for custom profiles that mount the Harness `invariants` service; the stock `headless` and `web` profiles do not mount it.
@@ -120,6 +126,6 @@ The test suite covers multilingual detection, normalization, overlapping quarant
 
 ## Status
 
-Version `0.1.0` is an independently tested MVP. The package remains `private: true` until a repository owner explicitly chooses a public Git remote and npm publication policy. No release, push, or registry publication is performed by the build.
+Version `0.1.0` is an independently tested MVP published at [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall). The package remains `private: true`; no npm registry publication is performed by the build.
 
 BSD-3-Clause licensed. See [LICENSE](LICENSE).

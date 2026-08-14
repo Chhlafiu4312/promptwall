@@ -8,6 +8,19 @@ const textExtensions = new Set(['.cjs', '.cts', '.js', '.json', '.jsx', '.md', '
 const codeExtensions = new Set(['.cjs', '.cts', '.js', '.jsx', '.mjs', '.mts', '.ts', '.tsx'])
 const failures = []
 const textFiles = []
+const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+const repositoryUrl = packageJson.repository?.url
+  ?.replace(/^git\+/, '')
+  .replace(/\.git$/, '')
+const allowedExternalMarkdownLinks = new Set([
+  repositoryUrl,
+  'https://img.shields.io/badge/license-BSD--3--Clause-blue.svg',
+])
+
+function isAllowedExternalMarkdownLink(target) {
+  return allowedExternalMarkdownLinks.has(target)
+    || (repositoryUrl !== undefined && target.startsWith(`${repositoryUrl}/`))
+}
 
 function isInsideRoot(target) {
   const rel = relative(root, target)
@@ -50,6 +63,7 @@ for (const filePath of textFiles) {
       const rawTarget = match[1].trim().replace(/^<|>$/g, '')
       if (rawTarget.startsWith('#') || rawTarget.startsWith('mailto:')) continue
       if (/^[a-z][a-z+.-]*:/i.test(rawTarget)) {
+        if (isAllowedExternalMarkdownLink(rawTarget)) continue
         failures.push(`${rel}: external Markdown link ${rawTarget}`)
         continue
       }
@@ -88,7 +102,6 @@ for (const requiredPath of [
   if (!existsSync(join(root, requiredPath))) failures.push(`missing repository-layout contract ${requiredPath}`)
 }
 
-const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
   for (const [name, spec] of Object.entries(packageJson[field] ?? {})) {
     if (/^(?:file|link|portal|workspace|git\+|https?):/i.test(spec) || spec.startsWith('.') || isAbsolute(spec)) {

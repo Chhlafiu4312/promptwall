@@ -2,6 +2,9 @@
 
 [English](README.md) | 中文
 
+[![CI](https://github.com/Chhlafiu4312/promptwall/actions/workflows/ci.yml/badge.svg)](https://github.com/Chhlafiu4312/promptwall/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
+
 PromptWall 是 DeepSeek Harness 的本地提示注入防火墙与密钥外发守卫。它会在模型读取工具结果之前检查不可信文本，并在疑似凭据进入联网工具之前要求批准。
 
 整个检测过程是确定性的：不调用模型、不上传内容、不收集遥测，也不会把匹配到的密钥原文写入日志。
@@ -48,12 +51,15 @@ command-producing-text | node lib/cli.js --fail-on suspicious
 
 ## 安装到 DeepSeek Harness
 
-当前仓库已支持本地 tarball 与 Git 安装，但尚未发布到 npm。
+源码已经发布到 GitHub，npm 包尚未发布。
 
 ```sh
+dsh plugin --profile headless add github:Chhlafiu4312/promptwall#v0.1.0
+dsh --profile headless --dump-config
+
+# 或构建并安装本地 tarball。
 pnpm pack
 dsh plugin --profile headless add ./dsh-promptwall-0.1.0.tgz
-dsh --profile headless --dump-config
 ```
 
 包内的 [cordis.patch.yml](cordis.patch.yml) 会注册 `promptwall`，也可以安装到 `web` profile。可选的 `dsh-promptwall/invariant` companion 保留给显式挂载 Harness `invariants` 服务的自定义 profile；官方 `headless` 与 `web` profile 默认不挂载该服务。激活后的工具是 `promptwall_scan({ text, includeSanitized? })`。
@@ -96,6 +102,6 @@ pnpm run prepare
 pnpm run build
 ```
 
-`0.1.0` 是经过独立测试的 MVP。包暂时保持 `private: true`，等待仓库所有者明确选择 GitHub 远程仓库和 npm 发布策略。构建过程不会自动推送或发布。
+`0.1.0` 是经过独立测试并发布于 [Chhlafiu4312/promptwall](https://github.com/Chhlafiu4312/promptwall) 的 MVP。包仍保持 `private: true`，构建过程不会发布到 npm。
 
 采用 BSD-3-Clause 许可证，详见 [LICENSE](LICENSE)。

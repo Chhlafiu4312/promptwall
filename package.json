@@ -3,6 +3,14 @@
   "description": "Local prompt-injection and secret-exfiltration firewall for DeepSeek Harness",
   "version": "0.1.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chhlafiu4312/promptwall.git"
+  },
+  "homepage": "https://github.com/Chhlafiu4312/promptwall#readme",
+  "bugs": {
+    "url": "https://github.com/Chhlafiu4312/promptwall/issues"
+  },
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "engines": {
