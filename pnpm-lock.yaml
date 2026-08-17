@@ -54,8 +54,8 @@ importers:
         specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(dbdaba06c174c5e30e3a58edf3cc27a9)
       '@deepseek-ai/schemastery':
-        specifier: 3.18.1-rc.4
-        version: 3.18.1-rc.4
+        specifier: 3.18.1
+        version: 3.18.1
       '@types/node':
         specifier: ^22.20.0
         version: 22.20.1
@@ -205,9 +205,6 @@ packages:
 
   '@deepseek-ai/schemastery@3.18.1':
     resolution: {integrity: sha512-Qn0FCSwCQnpnj6SB31I6i2sIKgKWnkbJM8O0EU91Gv2UsYVvtZTl6IA0sCwk2e2MZf5S8w5hpq9QkeVvK9qwxg==}
-
-  '@deepseek-ai/schemastery@3.18.1-rc.4':
-    resolution: {integrity: sha512-ZcaEjf3Mh0WN7Zlfm+syfff5dIFjy17lxXGsCcmwEtdQMjVsaRDGFX0yFZYSy7YsF5gx+d7FhFaQPVJIh/Zrlg==}
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
@@ -1214,11 +1211,6 @@ snapshots:
       '@deepseek-ai/schemastery': 3.18.1
 
   '@deepseek-ai/schemastery@3.18.1':
-    dependencies:
-      '@deepseek-ai/cosmokit': 1.8.2
-      '@standard-schema/spec': 1.1.0
-
-  '@deepseek-ai/schemastery@3.18.1-rc.4':
     dependencies:
       '@deepseek-ai/cosmokit': 1.8.2
       '@standard-schema/spec': 1.1.0
